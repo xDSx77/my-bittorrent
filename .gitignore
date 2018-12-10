@@ -1,0 +1,7 @@
+pdf/
+tests/
+torrents/
+my-bittorrent
+CMakeCache.txt
+CMakeFiles/*
+cmake_install.cmake
