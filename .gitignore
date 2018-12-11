@@ -3,7 +3,7 @@ tests/
 torrents/
 my-bittorrent
 Makefile
-src/include/bencode/bencode.h
+include/bencode/bencode.h
 lib/libbencode.a
 CMakeCache.txt
 CMakeFiles/*
