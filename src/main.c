@@ -16,7 +16,6 @@ int main(int argc, char **argv)
     struct options options;
     init_options(&options);
     int nb_options = parse_options(argc, argv, &options);
-    //print_options(&options);
     if (nb_options == -1)
         return 1;
 
@@ -35,18 +34,11 @@ int main(int argc, char **argv)
         i++;
     }
     buf[i] = '\0';
-    //printf("%s\n", buf);
     struct be_node *node = be_decode(buf, strlen(buf));
+
     if (options.d)
         contact(node);
-    printf("node 0 key length: %llu\n", node->element.dict[0]->key->length);
-    printf("node 0 key content: %s\n", node->element.dict[0]->key->content);
-    printf("node 0 val length: %llu\n", node->element.dict[0]->val->element.str->length);
-    printf("node 0 val content: %s\n", node->element.dict[0]->val->element.str->content);
-    printf("node 1 key length: %llu\n", node->element.dict[1]->key->length);
-    printf("node 1 key content: %s\n", node->element.dict[1]->key->content);
-    printf("node 1 val length: %llu\n", node->element.dict[1]->val->element.str->length);
-    printf("node 1 val content: %s\n", node->element.dict[1]->val->element.str->content);
+
     fclose (torrent);
     return 0;
 }
