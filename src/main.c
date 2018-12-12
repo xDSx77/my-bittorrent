@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <jansson.h>
+#include "pretty_print.h"
 #include "bencode/bencode.h"
 #include "options.h"
 #include "contact_tracker.h"
@@ -35,10 +37,11 @@ int main(int argc, char **argv)
     }
     buf[i] = '\0';
     struct be_node *node = be_decode(buf, strlen(buf));
-
     if (options.d)
         contact(node);
 
+    if (options.p == true)
+        pretty_print(node);
     fclose (torrent);
     return 0;
 }
