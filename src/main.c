@@ -3,6 +3,7 @@
 #include <string.h>
 #include "bencode/bencode.h"
 #include "options.h"
+#include "contact_tracker.h"
 
 int main(int argc, char **argv)
 {
@@ -36,6 +37,8 @@ int main(int argc, char **argv)
     buf[i] = '\0';
     //printf("%s\n", buf);
     struct be_node *node = be_decode(buf, strlen(buf));
+    if (options.d)
+        contact(node);
     printf("node 0 key length: %llu\n", node->element.dict[0]->key->length);
     printf("node 0 key content: %s\n", node->element.dict[0]->key->content);
     printf("node 0 val length: %llu\n", node->element.dict[0]->val->element.str->length);
