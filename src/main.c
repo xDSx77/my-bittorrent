@@ -1,7 +1,12 @@
+#define _POSIX_C_SOURCE 201112L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <error.h>
+#include <errno.h>
 #include <jansson.h>
+#include <sys/mman.h>
 #include "pretty_print.h"
 #include "bencode/bencode.h"
 #include "options.h"
@@ -27,21 +32,19 @@ int main(int argc, char **argv)
         printf("my-bittorrent: Cannot open %s\n", options.data);
         return 1;
     }
-    char *buf = malloc(1024);
-    int i = 0;
-    int c;
-    while ((c = fgetc(torrent)) != EOF)
-    {
-        buf[i] = c;
-        i++;
-    }
-    buf[i] = '\0';
-    struct be_node *node = be_decode(buf, strlen(buf));
+    int fd = fileno(torrent);
+    int length = lseek(fd, 0, SEEK_END);
+    char *buf = mmap(NULL, length, PROT_WRITE | PROT_READ, MAP_PRIVATE, fd, 0);
+    struct be_node *node = be_decode(buf, length);
+    if (!node)
+        return 1;
+
     if (options.d)
         contact(node);
 
-    if (options.p == true)
+    if (options.p)
         pretty_print(node);
+    munmap(buf, length);
     fclose (torrent);
     return 0;
 }

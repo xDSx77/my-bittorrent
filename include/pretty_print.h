@@ -5,7 +5,7 @@
 #include "bencode/bencode.h"
 
 void print_list(struct be_node *node, int indent);
-void print_dict(struct be_node *node, int indent);
+void print_dict(struct be_node *node, int indent, int comma);
 void print_data(struct be_node *node, int indent);
 void pretty_print(struct be_node *node);
 
