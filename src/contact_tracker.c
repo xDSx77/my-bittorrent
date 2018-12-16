@@ -1,6 +1,5 @@
+#define _POSIX_C_SOURCE 201112L
 #include "contact_tracker.h"
-#include <stdlib.h>
-#include <string.h>
 
 size_t write_callback(char *ptr, size_t size, size_t nmemb, char *userdata)
 {
@@ -26,6 +25,7 @@ int contact(struct be_node *node)
     CURL *handle = curl_easy_init();
 
     char *url = node->element.dict[0]->val->element.str->content;
+    get_ip(url);
     char data[4096] =
     {
         0
@@ -52,6 +52,42 @@ int contact(struct be_node *node)
 
     curl_easy_cleanup(handle);
     curl_global_cleanup();
+
+    return 0;
+}
+
+
+int get_ip(char *url)
+{
+    struct addrinfo hints;
+    struct addrinfo *rp;
+    struct addrinfo *res;
+
+    int status;
+    char ip[500];
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;  //IPv4
+    hints.ai_socktype = SOCK_STREAM;
+
+    status = getaddrinfo(url, NULL, &hints, &res);
+    if (status)
+    {
+        printf("getaddrinfo: %s\n", gai_strerror(status));
+        exit(1);
+    }
+
+    union cast cast;
+
+    for (rp = res; rp; rp = rp->ai_next)
+    {
+        cast.sock = rp->ai_addr;
+        void *addr = &(cast.sockin->sin_addr);
+        inet_ntop(rp->ai_family, addr, ip, sizeof(ip));
+        printf("IPv4: %s\n\n", ip);
+    }
+
+    freeaddrinfo(res);
 
     return 0;
 }
