@@ -64,7 +64,7 @@ int get_ip(char *url)
     struct addrinfo *res;
 
     int status;
-    char ip[500];
+    char ip[INET_ADDRSTRLEN];
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;  //IPv4
