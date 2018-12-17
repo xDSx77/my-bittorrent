@@ -14,6 +14,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include <openssl/sha.h>
+
 union cast
 {
     struct sockaddr *sock;
@@ -22,6 +24,7 @@ union cast
 
 size_t write_callback(char *ptr, size_t size, size_t nmemb, char *userdata);
 int contact(struct be_node *node);
-int get_ip(char *url);
+unsigned char *condensat(char *str, size_t len_str, unsigned char *cond);
+int get_socket(char *url);
 
 #endif  /* !CONTACT_TRACKER_ */

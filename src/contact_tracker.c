@@ -24,9 +24,20 @@ int contact(struct be_node *node)
 
     CURL *handle = curl_easy_init();
 
-    char *url = node->element.dict[0]->val->element.str->content;
-    get_ip(url);
-    char data[4096] =
+    char *url = malloc(290);
+    memset(url, 0, 290);
+    strcat(url, node->element.dict[0]->val->element.str->content);
+    strcat(url, "?peer_id=-MB2021-");
+    strcat(url, node->element.dict[1]->val->element.str->content);
+    strcat(url, "&info_hash=");
+    strcat(url, "&port=1174");
+    strcat(url, "&left=");
+    strcat(url, "&downloaded=");
+    strcat(url, "&uploaded=");
+    strcat(url, "&compact=1");
+    puts(url);
+    //get_socket(url);
+    char data[50000] =
     {
         0
     };
@@ -56,9 +67,19 @@ int contact(struct be_node *node)
     return 0;
 }
 
-
-int get_ip(char *url)
+unsigned char *condensat(char *str, size_t len_str, unsigned char *cond)
 {
+    SHA_CTX c;
+    SHA1_Init(&c);
+    SHA1_Update(&c, str, len_str);
+    SHA1_Final(cond, &c);
+
+    return cond;
+}
+
+
+int get_socket(char *url)   //does not get the ip, but get the sockaddr struct
+{//not url but ip in our case (maybe)
     struct addrinfo hints;
     struct addrinfo *rp;
     struct addrinfo *res;

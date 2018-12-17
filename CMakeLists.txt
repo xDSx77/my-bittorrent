@@ -12,7 +12,7 @@ add_executable(my-bittorrent
     ${CMAKE_SOURCE_DIR}/src/mktorrent.c
 )
 target_link_libraries(my-bittorrent ${CMAKE_SOURCE_DIR}/lib/libbencode.a
-jansson curl)
+    jansson curl crypto)
 
 add_custom_target(check
     COMMAND ${SHELL_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/launch.sh
