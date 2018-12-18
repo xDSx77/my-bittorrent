@@ -17,24 +17,16 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, char *userdata)
     return i;   //have to return the number of bytes written
 }
 
-int contact(struct be_node *node)
+int contact(struct be_node *node, char *path, char *buf, int len_buf)
 {
+    path = path;
     if (!node)
         return 1;
 
     CURL *handle = curl_easy_init();
 
     char *url = malloc(290);
-    memset(url, 0, 290);
-    strcat(url, node->element.dict[0]->val->element.str->content);
-    strcat(url, "?peer_id=-MB2021-");
-    strcat(url, node->element.dict[1]->val->element.str->content);
-    strcat(url, "&info_hash=");
-    strcat(url, "&port=1174");
-    strcat(url, "&left=");
-    strcat(url, "&downloaded=");
-    strcat(url, "&uploaded=");
-    strcat(url, "&compact=1");
+    compact(node, url, buf, len_buf);
     puts(url);
     //get_socket(url);
     char data[50000] =
@@ -55,6 +47,9 @@ int contact(struct be_node *node)
     if (c)
     {
         printf("CURL ERROR : %d\n", c);
+        free(url);
+        curl_easy_cleanup(handle);
+        curl_global_cleanup();
         return 1;
     }
 
@@ -63,8 +58,72 @@ int contact(struct be_node *node)
 
     curl_easy_cleanup(handle);
     curl_global_cleanup();
+    free(url);
 
     return 0;
+}
+
+char *compact(struct be_node *node, char *str, char *buf, int len_buf)
+{
+    CURL *handle = curl_easy_init();
+    memset(str, 0, 290);
+    strcat(str, node->element.dict[0]->val->element.str->content);
+    strcat(str, "?peer_id=-MB2021-");
+    char *peer_id = node->element.dict[1]->val->element.str->content;
+    char *peer_id_esc = curl_easy_escape(handle, peer_id, strlen(peer_id));
+    strcat(str, peer_id_esc);
+    if (strlen("-MB2021-") + strlen(peer_id_esc) != 20)
+    {
+        size_t pad = 20 - (strlen("-MB2021-") + strlen(peer_id_esc));
+        for (; pad > 0; pad--)
+            strcat(str, "a");
+    }
+    strcat(str, "&info_hash=");
+    //make sha1 of info
+    int i = 0;
+    char *info = NULL;
+    while (buf[i])
+    {
+        if (buf[i] == ':' && buf[i + 1] == 'i' && buf[i + 2] == 'n')
+            if (buf[i + 3] == 'f' && buf[i + 4] == 'o' && buf[i + 5] == 'd')
+            {
+                i += 5;
+                info = buf + i;
+                break;
+            }
+        i++;
+    }
+    info[len_buf - i - 1] = '\0';   //delete the final e of the first dict
+    char *buf_escaped = curl_easy_escape(handle, info, len_buf - i);
+
+    unsigned char *sha1 = calloc(SHA_DIGEST_LENGTH, 1);
+    union cast_str cast1;
+    condensat(buf_escaped, len_buf - i, sha1);
+    cast1.u_str = sha1;
+    char *sha1_esc = curl_easy_escape(handle, cast1.str, SHA_DIGEST_LENGTH);
+    strcat(str, sha1_esc);
+    /*
+    if (strlen(cast1.str) != 20)
+    {
+        for (size_t pad = strlen(cast1.str); pad > 0; pad--)
+            strcat(str, "a");
+    }
+    */
+
+    strcat(str, "&port=1174");
+    strcat(str, "&left=0");
+    strcat(str, "&downloaded=0");
+    strcat(str, "&uploaded=0");
+    strcat(str, "&compact=1");
+
+    free(sha1);
+    curl_free(buf_escaped);
+    curl_free(peer_id_esc);
+    curl_free(sha1_esc);
+    curl_easy_cleanup(handle);
+    curl_global_cleanup();
+
+    return str;
 }
 
 unsigned char *condensat(char *str, size_t len_str, unsigned char *cond)
@@ -98,7 +157,7 @@ int get_socket(char *url)   //does not get the ip, but get the sockaddr struct
         exit(1);
     }
 
-    union cast cast;
+    union cast_sock cast;
 
     for (rp = res; rp; rp = rp->ai_next)
     {
