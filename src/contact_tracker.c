@@ -17,9 +17,8 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, char *userdata)
     return i;   //have to return the number of bytes written
 }
 
-int contact(struct be_node *node, char *path, char *buf, int len_buf)
+int contact(struct be_node *node, char *buf, int len_buf)
 {
-    path = path;
     if (!node)
         return 1;
 

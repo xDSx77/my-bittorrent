@@ -1,11 +1,5 @@
 #include "check_integrity.h"
 
-union cast_str
-{
-    char *str;
-    unsigned char *u_str;
-};
-
 int check_integrity(struct be_node *node, char *path)
 {
     struct be_dict *dict2 = node->element.dict[3]->val->element.dict[3];

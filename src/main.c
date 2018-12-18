@@ -44,7 +44,7 @@ int main(int argc, char **argv)
         fclose(torrent);
         errx(1, "Error: Cannot map '%s' in memory", options.data);
     }
-    
+
     struct be_node *node = be_decode(buf, length);
     if (!node)
     {
@@ -69,11 +69,11 @@ int main(int argc, char **argv)
     }
 
     if (options.d)
-        contact(node);
+        contact(node, buf, length);
 
     if (options.p)
         pretty_print(node);
-    
+
     be_free(node);
     fclose(torrent);
     return 0;

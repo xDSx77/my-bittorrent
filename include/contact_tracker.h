@@ -29,7 +29,7 @@ union  cast_str
 };
 
 size_t write_callback(char *ptr, size_t size, size_t nmemb, char *userdata);
-int contact(struct be_node *node, char *path, char *buf, int len_buf);
+int contact(struct be_node *node, char *buf, int len_buf);
 char *compact(struct be_node *node, char *str, char *buf, int len_buf);
 unsigned char *condensat(char *str, size_t len_str, unsigned char *cond);
 int get_socket(char *url);
