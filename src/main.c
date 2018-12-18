@@ -40,11 +40,17 @@ int main(int argc, char **argv)
     int length = lseek(fd, 0, SEEK_END);
     char *buf = mmap(NULL, length, PROT_WRITE | PROT_READ, MAP_PRIVATE, fd, 0);
     if (!buf)
+    {
+        fclose(torrent);
         errx(1, "Error: Cannot map '%s' in memory", options.data);
+    }
 
     struct be_node *node = be_decode(buf, length);
     if (!node)
+    {
+        fclose(torrent);
         errx(1, "Error: Buffer of '%s' is incorrect", options.data);
+    }
 
     if (options.d)
         contact(node);
@@ -52,7 +58,7 @@ int main(int argc, char **argv)
     if (options.p)
         pretty_print(node);
     
-    munmap(buf, length);
+    be_free(node);
     fclose (torrent);
     return 0;
 }
