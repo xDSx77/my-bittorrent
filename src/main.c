@@ -16,11 +16,8 @@
 int main(int argc, char **argv)
 {
     if (argc == 1)
-    {
-        fprintf(stderr,
-            "my-bittorrent: Usage: ./my-bittorrent [options] [files]\n");
-        return 1;
-    }
+        errx(1, "Usage: ./my-bittorrent [options] [files]");
+
     struct options options;
     init_options(&options);
     int nb_options = parse_options(argc, argv, &options);
@@ -37,16 +34,17 @@ int main(int argc, char **argv)
 
     FILE *torrent = fopen(options.data, "r");
     if (torrent == NULL)
-    {
-        printf("my-bittorrent: Cannot open %s\n", options.data);
-        return 1;
-    }
+        errx(1, "Error: Cannot open '%s'", options.data);
+
     int fd = fileno(torrent);
     int length = lseek(fd, 0, SEEK_END);
     char *buf = mmap(NULL, length, PROT_WRITE | PROT_READ, MAP_PRIVATE, fd, 0);
+    if (!buf)
+        errx(1, "Error: Cannot map '%s' in memory", options.data);
+
     struct be_node *node = be_decode(buf, length);
     if (!node)
-        return 1;
+        errx(1, "Error: Buffer of '%s' is incorrect", options.data);
 
     if (options.d)
         contact(node);

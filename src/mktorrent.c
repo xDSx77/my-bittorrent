@@ -1,51 +1,49 @@
+#define _XOPEN_SOURCE 500
 #include "mktorrent.h"
 
 char *date(void)
 {
     time_t *t = malloc(sizeof(time_t));
     time(t);
-    struct tm *tm = localtime(t);
-    char *date = calloc(14, sizeof(char));
-    char *year = calloc(4, sizeof(char));
-    char *month = calloc(2, sizeof(char));
-    char *day = calloc(2, sizeof(char));
-    char *hour = calloc(2, sizeof(char));
-    char *min = calloc(2, sizeof(char));
-    char *sec = calloc(2, sizeof(char));
-    sprintf(year, "%d", tm->tm_year + 1900);
-    sprintf(month, "%d", tm->tm_mon + 1);
-    sprintf(day, "%d", tm->tm_mday);
-    sprintf(hour, "%d", tm->tm_hour);
-    sprintf(min, "%d", tm->tm_min);
-    sprintf(sec, "%d", tm->tm_sec);
-    strcat(date, year);
-    strcat(date, month);
-    strcat(date, day);
-    strcat(date, hour);
-    strcat(date, min);
-    strcat(date, sec);
+    char *date = calloc(10, sizeof(char));
+    sprintf(date, "%ld", *t);
     free(t);
     return date;
 }
 
 int mktorrent(char *path)
 {
-    char *file = path;
-    strcat(file, ".torrent");
-    FILE *torrent = fopen(file, "a+");
+    char *file = strdup(path);
+    FILE *p = fopen(path, "r");
+    if (!p)
+        errx(1, "Error: '%s': No such file or directory", path);
+        
+    int fd = fileno(p);
+    int length = lseek(fd, 0, SEEK_END);
+    char *buf = mmap(NULL, length, PROT_WRITE | PROT_READ, MAP_PRIVATE, fd, 0);
+    if (!buf)
+        errx(1, "Error: Cannot map '%s' in memory", path);
+
+    strcat(path, ".torrent");
+    if (access(path, F_OK) != -1)
+        errx(1, "Error creating '%s': File exists", path);
+
+    FILE *torrent = fopen(path, "a+");
     if (!torrent)
-    {
-        puts("mybittorrent: error when opening the file");
-        return 1;
-    }
+        errx(1, "Error: Cannot create '%s'", path);
+    
     fprintf(torrent, "%s", "d8:announce30:http://localhost:6969/announce");
-    fprintf(torrent, "%s", "7:comment6:coucou");
-    fprintf(torrent, "%s", "10:created by12:Allan Cantin");
-    fprintf(torrent, "%s%s%s", "13:creation datei", date(), "e");
-    fprintf(torrent, "%s", "4:infod6:lengthi15e");
-    fprintf(torrent, "%s%ld%s%s", "4:name", strlen(path), ":", path);
-    fprintf(torrent, "%s", "12:piece lengthi123456e");
-    fprintf(torrent, "%s", "6:pieces32:a&'5rnKT;PW^èOP8u$@{¤è+,gRZ:<7£²ee");
+    //fprintf(torrent, "%s", "7:comment6:coucou");
+    fprintf(torrent, "%s", "10:created by12:allan.cantin");
+    char *d = date();
+    fprintf(torrent, "%s%s%s", "13:creation datei", d, "e");
+    fprintf(torrent, "%s%ld%s", "4:infod6:lengthi", strlen(buf), "e");
+    fprintf(torrent, "%s%ld%s%s", "4:name", strlen(file), ":", file);
+    fprintf(torrent, "%s", "12:piece lengthi262144e");
+    fprintf(torrent, "%s", "6:pieces20:a&'5rnKT;PW^èOP8u$@{ee");
+    fclose(p);
     fclose(torrent);
+    free(d);
+    free(file);
     return 0;
 }
