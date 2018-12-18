@@ -11,6 +11,7 @@
 #include "bencode/bencode.h"
 #include "options.h"
 #include "contact_tracker.h"
+#include "mktorrent.h"
 
 int main(int argc, char **argv)
 {
@@ -25,6 +26,14 @@ int main(int argc, char **argv)
     int nb_options = parse_options(argc, argv, &options);
     if (nb_options == -1)
         return 1;
+
+    if (options.m)
+    {
+        if (mktorrent(options.data) == 0)
+            return 0;
+        else
+            return 1;
+    }
 
     FILE *torrent = fopen(options.data, "r");
     if (torrent == NULL)
@@ -44,6 +53,7 @@ int main(int argc, char **argv)
 
     if (options.p)
         pretty_print(node);
+    
     munmap(buf, length);
     fclose (torrent);
     return 0;

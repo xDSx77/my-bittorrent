@@ -9,9 +9,10 @@ add_executable(my-bittorrent
     ${CMAKE_SOURCE_DIR}/src/options.c
     ${CMAKE_SOURCE_DIR}/src/contact_tracker.c
     ${CMAKE_SOURCE_DIR}/src/pretty_print.c
+    ${CMAKE_SOURCE_DIR}/src/mktorrent.c
 )
 target_link_libraries(my-bittorrent ${CMAKE_SOURCE_DIR}/lib/libbencode.a
-jansson)
+jansson curl)
 
 add_custom_target(check
     COMMAND ${SHELL_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/launch.sh
