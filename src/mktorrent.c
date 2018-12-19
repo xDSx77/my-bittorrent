@@ -2,7 +2,7 @@
 #include "mktorrent.h"
 #include "contact_tracker.h"
 
-time_t *date(void)
+static time_t *date(void)
 {
     time_t *t = malloc(sizeof(time_t));
     time(t);
@@ -52,7 +52,7 @@ int mktorrent(char *path)
     fprintf(torrent, "%s%ld%s", "4:infod6:lengthi", strlen(buf), "e");
     fprintf(torrent, "%s%ld%s%s", "4:name", strlen(file), ":", file);
     fprintf(torrent, "%s", "12:piece lengthi262144e");
-    unsigned char *sha1 = malloc(20 * sizeof(char));
+    unsigned char *sha1 = malloc(20);
     condensat(buf, strlen(buf), sha1);
     fprintf(torrent, "%s%.*s%s", "6:pieces20:", 20, sha1, "ee");
     fclose(p);
