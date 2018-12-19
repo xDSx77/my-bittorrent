@@ -52,9 +52,6 @@ int contact(struct be_node *node, char *buf, int len_buf)
         return 1;
     }
 
-    puts(errbuf);
-    puts(data);
-
     curl_easy_cleanup(handle);
     curl_global_cleanup();
     free(url);
@@ -67,18 +64,44 @@ char *compact(struct be_node *node, char *str, char *buf, int len_buf)
     CURL *handle = curl_easy_init();
     memset(str, 0, 290);
     strcat(str, node->element.dict[0]->val->element.str->content);
+
+    // --peer_id-- //
+    char *peer_id_esc = peer_id(node, str, handle);
+
+    // --info_hash-- //
+    char *buf_escaped = find_info(buf, len_buf, handle);
+    char *sha1_esc = info_hash(str, buf_escaped, handle);
+
+    // --other--//
+    strcat(str, "&port=1174");
+    strcat(str, "&left=0");
+    strcat(str, "&downloaded=0");
+    strcat(str, "&uploaded=0");
+    strcat(str, "&compact=1");
+
+    free_curl(handle, buf_escaped, peer_id_esc, sha1_esc);
+
+    return str;
+}
+
+char *peer_id(struct be_node *node, char *str, CURL *handle)
+{
     strcat(str, "?peer_id=-MB2021-");
     char *peer_id = node->element.dict[1]->val->element.str->content;
     char *peer_id_esc = curl_easy_escape(handle, peer_id, strlen(peer_id));
-    strcat(str, peer_id_esc);
     if (strlen("-MB2021-") + strlen(peer_id_esc) != 20)
     {
         size_t pad = 20 - (strlen("-MB2021-") + strlen(peer_id_esc));
         for (; pad > 0; pad--)
-            strcat(str, "a");
+            strcat(peer_id_esc, "a");
     }
-    strcat(str, "&info_hash=");
-    //make sha1 of info
+    strcat(str, peer_id_esc);
+
+    return peer_id_esc;
+}
+
+char *find_info(char *buf, int len_buf, CURL *handle)
+{
     int i = 0;
     char *info = NULL;
     while (buf[i])
@@ -93,29 +116,33 @@ char *compact(struct be_node *node, char *str, char *buf, int len_buf)
         i++;
     }
     info[len_buf - i - 1] = '\0';   //delete the final e of the first dict
+
     char *buf_escaped = curl_easy_escape(handle, info, len_buf - i);
 
+    return buf_escaped;
+}
+
+char *info_hash(char *str, char *buf_escaped, CURL *handle)
+{
+    strcat(str, "&info_hash=");
     unsigned char *sha1 = calloc(SHA_DIGEST_LENGTH, 1);
     union cast_str cast1;
-    condensat(buf_escaped, len_buf - i, sha1);
+    condensat(buf_escaped, strlen(buf_escaped), sha1);
     cast1.u_str = sha1;
     char *sha1_esc = curl_easy_escape(handle, cast1.str, SHA_DIGEST_LENGTH);
     strcat(str, sha1_esc);
 
-    strcat(str, "&port=1174");
-    strcat(str, "&left=0");
-    strcat(str, "&downloaded=0");
-    strcat(str, "&uploaded=0");
-    strcat(str, "&compact=1");
-
     free(sha1);
-    curl_free(buf_escaped);
-    curl_free(peer_id_esc);
-    curl_free(sha1_esc);
+    return sha1_esc;
+}
+
+void free_curl(CURL *handle, char *str1, char *str2, char *str3)
+{
+    curl_free(str1);
+    curl_free(str2);
+    curl_free(str3);
     curl_easy_cleanup(handle);
     curl_global_cleanup();
-
-    return str;
 }
 
 unsigned char *condensat(char *str, size_t len_str, unsigned char *cond)
