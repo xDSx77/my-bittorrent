@@ -26,39 +26,34 @@ void print_options(struct options *options)
     printf("data: %s\n", options->data);
 }
 
-static void print_require(char *arg)
-{
-    printf("my-bittorrent: %s: option requires an argument\n", arg);
-}
-
-static void print_invalid(char *arg)
-{
-    printf("my-bittorrent: %s: invalid argument\n", arg);
-}
-
 static int check_error(int argc, char **argv, struct options *options, int i)
 {
-    if (options->activate > 2)
+    if (options->activate > 3)
     {
         printf("my-bittorrent: too many arguments\n");
         return -1;
+    }
+    if (options->activate == 3)
+    {
+        if (options->d == false || options->v == false)
+        {
+            printf("my-bittorrent: too many arguments\n");
+            return -1;
+        }
+        return 0;
     }
     if (options->activate == 2)
     {
         if (options->d == false || options->v == false)
         {
-            printf("my-bittorrent: those 2 arguments can't be used together\n");
+            printf("my-bittorrent: '%s' and '%s': incompatible options\n",
+                argv[1], argv[2]);
             return -1;
         }
     }
     if (i + 1 >= argc)
     {
-        print_require(argv[i]);
-        return -1;
-    }
-    if (strncmp("-", argv[i+1], 1) == 0)
-    {
-        print_invalid(argv[i]);
+        printf("my-bittorrent: %s: option requires an argument\n", argv[i]);
         return -1;
     }
     return 0;
@@ -71,6 +66,8 @@ static int fill_options(int argc, char **argv, struct options *options, int *i,
     options->activate++;
     if (check_error(argc, argv, options, *i) == -1)
         return -1;
+    if (strncmp(argv[*i + 1], "-", 1) == 0)
+        return 0;
     options->data = argv[++*i];
     return 0;
 }
@@ -175,9 +172,6 @@ int parse_options(int argc, char **argv, struct options *options)
     i = parse_long(argc, argv, options, i);
     if (i == -1)
         return -1;
-
-    if (i > 1)
-        return 0;
 
     i = parse_short(argc, argv, options, i);
     if (i == -1)
