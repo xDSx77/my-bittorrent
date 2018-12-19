@@ -101,13 +101,6 @@ char *compact(struct be_node *node, char *str, char *buf, int len_buf)
     cast1.u_str = sha1;
     char *sha1_esc = curl_easy_escape(handle, cast1.str, SHA_DIGEST_LENGTH);
     strcat(str, sha1_esc);
-    /*
-    if (strlen(cast1.str) != 20)
-    {
-        for (size_t pad = strlen(cast1.str); pad > 0; pad--)
-            strcat(str, "a");
-    }
-    */
 
     strcat(str, "&port=1174");
     strcat(str, "&left=0");
