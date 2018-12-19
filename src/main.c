@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <error.h>
-#include <errno.h>
+#include <err.h>
 #include <jansson.h>
 #include <sys/mman.h>
 #include "pretty_print.h"
@@ -12,6 +11,7 @@
 #include "options.h"
 #include "contact_tracker.h"
 #include "mktorrent.h"
+#include "check_integrity.h"
 
 int main(int argc, char **argv)
 {
@@ -44,12 +44,28 @@ int main(int argc, char **argv)
         fclose(torrent);
         errx(1, "Error: Cannot map '%s' in memory", options.data);
     }
-
+    
     struct be_node *node = be_decode(buf, length);
     if (!node)
     {
         fclose(torrent);
         errx(1, "Error: Buffer of '%s' is incorrect", options.data);
+    }
+
+    if (options.c)
+    {
+        if (check_integrity(node, options.data) == 0)
+        {
+            be_free(node);
+            fclose(torrent);
+            return 0;
+        }
+        else
+        {
+            be_free(node);
+            fclose(torrent);
+            return 1;
+        }
     }
 
     if (options.d)
@@ -59,6 +75,6 @@ int main(int argc, char **argv)
         pretty_print(node);
     
     be_free(node);
-    fclose (torrent);
+    fclose(torrent);
     return 0;
 }
