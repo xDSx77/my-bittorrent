@@ -2,17 +2,13 @@
 #define CONTACT_TRACKER_
 
 #include "bencode/bencode.h"
+#include "dump_peers.h"
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <curl/curl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 
 #include <openssl/sha.h>
 
@@ -36,6 +32,5 @@ char *find_info(char *buf, int len_buf, CURL *handle);
 char *info_hash(char *str, char *buf_escaped, CURL *handle);
 void free_curl(CURL *handle, char *str1, char *str2, char *str3);
 unsigned char *condensat(char *str, size_t len_str, unsigned char *cond);
-int get_socket(char *url);
 
 #endif  /* !CONTACT_TRACKER_ */

@@ -8,13 +8,24 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, char *userdata)
         return 0;
     //maybe check the if the len of userdata is sufficient
 
+    CURL *handle = curl_easy_init();
+    char *ptr_esc = curl_easy_escape(handle,ptr,size * nmemb);
     size_t i = 0;
 
-    for (; ptr[i]; i++)
-        userdata[i] = ptr[i];
+    for (; ptr_esc[i]; i++)
+        userdata[i] = ptr_esc[i];
     userdata[i + 1] = '\0';
 
-    return i;   //have to return the number of bytes written
+    free_curl(handle, NULL, NULL, NULL);
+    return size * nmemb;   //have to return the number of bytes written
+}
+
+void setopt_handle(CURL *handle, char *url, char *data, char *errbuf)
+{
+    curl_easy_setopt(handle, CURLOPT_URL, url);
+    curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(handle, CURLOPT_WRITEDATA, data);
+    curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, errbuf);
 }
 
 int contact(struct be_node *node, char *buf, int len_buf)
@@ -24,37 +35,34 @@ int contact(struct be_node *node, char *buf, int len_buf)
 
     CURL *handle = curl_easy_init();
 
-    char *url = malloc(290);
+    char *url = calloc(290,1);
+    if (!url)
+    {
+        printf("Malloc failed\n");
+        return 1;
+    }
     compact(node, url, buf, len_buf);
-    puts(url);
-    //get_socket(url);
-    char data[50000] =
-    {
-        0
-    };
-    char errbuf[CURL_ERROR_SIZE] =
-    {
-        0
-    };
+    puts(url);  //debug
 
-    curl_easy_setopt(handle, CURLOPT_URL, url);
-    curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_callback);
-    curl_easy_setopt(handle, CURLOPT_WRITEDATA, &data);
-    curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, &errbuf);
+    //get_socket(url);
+
+    //manage error of calloc maybe//
+    char *data = calloc(50000, 1);
+    char *errbuf = calloc(CURL_ERROR_SIZE, 1);
+
+    setopt_handle(handle, url, data, errbuf);
 
     int c = curl_easy_perform(handle);
     if (c)
     {
         printf("CURL ERROR : %d\n", c);
-        free(url);
-        curl_easy_cleanup(handle);
-        curl_global_cleanup();
+        free_curl(handle, url, data, errbuf);
         return 1;
     }
 
-    curl_easy_cleanup(handle);
-    curl_global_cleanup();
-    free(url);
+    puts(data);
+
+    free_curl(handle, url, data, errbuf);
 
     return 0;
 }
@@ -74,9 +82,10 @@ char *compact(struct be_node *node, char *str, char *buf, int len_buf)
 
     // --other--//
     strcat(str, "&port=1174");
-    strcat(str, "&left=0");
+    strcat(str, "&left=50");
     strcat(str, "&downloaded=0");
     strcat(str, "&uploaded=0");
+    strcat(str, "&event=started");
     strcat(str, "&compact=1");
 
     free_curl(handle, buf_escaped, peer_id_esc, sha1_esc);
@@ -86,18 +95,28 @@ char *compact(struct be_node *node, char *str, char *buf, int len_buf)
 
 char *peer_id(struct be_node *node, char *str, CURL *handle)
 {
-    strcat(str, "?peer_id=-MB2021-");
+    strcat(str, "?peer_id=-MB2021-aaaaaaaaaaaa");
+    node = node;
+    str = str;
+    handle = handle;
+    /*
     char *peer_id = node->element.dict[1]->val->element.str->content;
     char *peer_id_esc = curl_easy_escape(handle, peer_id, strlen(peer_id));
-    if (strlen("-MB2021-") + strlen(peer_id_esc) != 20)
+    if (strlen("-MB2021-") + strlen(peer_id_esc) < 20)
     {
         size_t pad = 20 - (strlen("-MB2021-") + strlen(peer_id_esc));
         for (; pad > 0; pad--)
             strcat(peer_id_esc, "a");
     }
+    else if (strlen("-MB2021-") + strlen(peer_id_esc) > 20)
+    {
+        size_t pad = (strlen("-MB2021-") + strlen(peer_id_esc)) - 20;
+        peer_id_esc[strlen(peer_id_esc) - pad] = '\0';
+    }
     strcat(str, peer_id_esc);
+    */
 
-    return peer_id_esc;
+    return NULL;//peer_id_esc;
 }
 
 char *find_info(char *buf, int len_buf, CURL *handle)
@@ -153,40 +172,4 @@ unsigned char *condensat(char *str, size_t len_str, unsigned char *cond)
     SHA1_Final(cond, &c);
 
     return cond;
-}
-
-
-int get_socket(char *url)   //does not get the ip, but get the sockaddr struct
-{//not url but ip in our case (maybe)
-    struct addrinfo hints;
-    struct addrinfo *rp;
-    struct addrinfo *res;
-
-    int status;
-    char ip[INET_ADDRSTRLEN];
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;  //IPv4
-    hints.ai_socktype = SOCK_STREAM;
-
-    status = getaddrinfo(url, NULL, &hints, &res);
-    if (status)
-    {
-        printf("getaddrinfo: %s\n", gai_strerror(status));
-        exit(1);
-    }
-
-    union cast_sock cast;
-
-    for (rp = res; rp; rp = rp->ai_next)
-    {
-        cast.sock = rp->ai_addr;
-        void *addr = &(cast.sockin->sin_addr);
-        inet_ntop(rp->ai_family, addr, ip, sizeof(ip));
-        printf("IPv4: %s\n\n", ip);
-    }
-
-    freeaddrinfo(res);
-
-    return 0;
 }
