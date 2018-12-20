@@ -32,5 +32,6 @@ char *find_info(char *buf, int len_buf, CURL *handle);
 char *info_hash(char *str, char *buf_escaped, CURL *handle);
 void free_curl(CURL *handle, char *str1, char *str2, char *str3);
 unsigned char *condensat(char *str, size_t len_str, unsigned char *cond);
+void dump_peers(char *peers);
 
 #endif  /* !CONTACT_TRACKER_ */

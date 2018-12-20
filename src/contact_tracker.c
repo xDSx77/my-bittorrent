@@ -1,22 +1,19 @@
 #define _POSIX_C_SOURCE 201112L
+#define _DEFAULT_SOURCE
 #include "contact_tracker.h"
 
 size_t write_callback(char *ptr, size_t size, size_t nmemb, char *userdata)
 {
-    size = size;
     if (!nmemb)
         return 0;
-    //maybe check the if the len of userdata is sufficient
 
-    CURL *handle = curl_easy_init();
-    char *ptr_esc = curl_easy_escape(handle,ptr,size * nmemb);
-    size_t i = 0;
+    struct be_node *node = be_decode(ptr, size * nmemb);
+    char *peers = node->element.dict[5]->val->element.str->content;
 
-    for (; ptr_esc[i]; i++)
-        userdata[i] = ptr_esc[i];
-    userdata[i + 1] = '\0';
+    userdata = memcpy(userdata, peers, 50);
 
-    free_curl(handle, NULL, NULL, NULL);
+    be_free(node);
+
     return size * nmemb;   //have to return the number of bytes written
 }
 
@@ -36,15 +33,8 @@ int contact(struct be_node *node, char *buf, int len_buf)
     CURL *handle = curl_easy_init();
 
     char *url = calloc(290,1);
-    if (!url)
-    {
-        printf("Malloc failed\n");
-        return 1;
-    }
-    compact(node, url, buf, len_buf);
-    puts(url);  //debug
 
-    //get_socket(url);
+    compact(node, url, buf, len_buf);
 
     //manage error of calloc maybe//
     char *data = calloc(50000, 1);
@@ -60,7 +50,8 @@ int contact(struct be_node *node, char *buf, int len_buf)
         return 1;
     }
 
-    puts(data);
+    //function to exploit data
+    dump_peers(data);
 
     free_curl(handle, url, data, errbuf);
 
@@ -95,28 +86,25 @@ char *compact(struct be_node *node, char *str, char *buf, int len_buf)
 
 char *peer_id(struct be_node *node, char *str, CURL *handle)
 {
-    strcat(str, "?peer_id=-MB2021-aaaaaaaaaaaa");
-    node = node;
-    str = str;
-    handle = handle;
-    /*
+    strcat(str, "?peer_id=-MB2021-");
     char *peer_id = node->element.dict[1]->val->element.str->content;
-    char *peer_id_esc = curl_easy_escape(handle, peer_id, strlen(peer_id));
-    if (strlen("-MB2021-") + strlen(peer_id_esc) < 20)
-    {
-        size_t pad = 20 - (strlen("-MB2021-") + strlen(peer_id_esc));
-        for (; pad > 0; pad--)
-            strcat(peer_id_esc, "a");
-    }
-    else if (strlen("-MB2021-") + strlen(peer_id_esc) > 20)
-    {
-        size_t pad = (strlen("-MB2021-") + strlen(peer_id_esc)) - 20;
-        peer_id_esc[strlen(peer_id_esc) - pad] = '\0';
-    }
-    strcat(str, peer_id_esc);
-    */
 
-    return NULL;//peer_id_esc;
+    if (strlen("-MB2021-") + strlen(peer_id) < 20)
+    {
+        size_t pad = 20 - (strlen("-MB2021-") + strlen(peer_id));
+        for (; pad > 0; pad--)
+            strcat(peer_id, "a");
+    }
+    else if (strlen("-MB2021-") + strlen(peer_id) > 20)
+    {
+        size_t pad = (strlen("-MB2021-") + strlen(peer_id)) - 20;
+        peer_id[strlen(peer_id) - pad] = '\0';
+    }
+
+    char *peer_id_esc = curl_easy_escape(handle, peer_id, strlen(peer_id));
+    strcat(str, peer_id_esc);
+
+    return peer_id_esc;
 }
 
 char *find_info(char *buf, int len_buf, CURL *handle)
@@ -172,4 +160,14 @@ unsigned char *condensat(char *str, size_t len_str, unsigned char *cond)
     SHA1_Final(cond, &c);
 
     return cond;
+}
+
+void dump_peers(char *peers)
+{
+    char ip[18];
+    sprintf(ip, "%d.%d.%d.%d", peers[0], peers[1], peers[2], peers[3]);
+    uint16_t big = peers[4];
+    uint16_t low = peers[5];
+    int port = ntohs(big) | ntohs(low);
+    printf("%s:%d\n", ip, port);
 }
