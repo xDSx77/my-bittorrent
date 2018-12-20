@@ -40,7 +40,8 @@ static void error(FILE *file, DIR *dir, char *path2, enum err err, char *path)
 static void free_all(FILE *file, FILE *torrent, unsigned char *sha1, time_t *d,
     char *path2)
 {
-    fclose(file);
+    if (file)
+        fclose(file);
     fclose(torrent);
     free(sha1);
     free(d);
@@ -59,7 +60,7 @@ void handle_file(char *path, char *path2, FILE *file, DIR *dir)
         error(file, dir, path2, FILE_EXISTS, path);
 
     int fd = fileno(file);
-    int length = lseek(fd, 0, SEEK_END);
+    size_t length = lseek(fd, 0, SEEK_END);
     char *buf = mmap(NULL, length, PROT_WRITE | PROT_READ, MAP_PRIVATE, fd, 0);
     if (!buf)
         error(file, dir, path2, CANT_MAP, path2);
@@ -95,7 +96,7 @@ int mktorrent(char *path)
 
     if (S_ISDIR(statbuf.st_mode))
     {
-        dir = opendir(path);
+        dir = opendir(path2);
         if (!dir)
             error(file, dir, path2, NO_FILE, path);
         int nb_file = 0;
@@ -113,8 +114,8 @@ int mktorrent(char *path)
         time_t *d = date();
         fprintf(torrent, "13:creation datei%lde", *d);
         fprintf(torrent, "4:infod5:filesl");
-        char *bigbuf = malloc(50000);
-        chdir(path);
+        char *bigbuf = calloc(50000, 1);
+        chdir(path2);
         while ((dirent = readdir(dir)) != NULL)
         {
             nb_file++;
@@ -126,14 +127,14 @@ int mktorrent(char *path)
                 error(file, dir, path2, NO_FILE, dirent->d_name);
 
             int f = fileno(file);
-            int l = lseek(f, 0, SEEK_END);
+            size_t l = lseek(f, 0, SEEK_END);
             char *b = mmap(NULL, l, PROT_WRITE | PROT_READ, MAP_PRIVATE, f, 0);
-            strcat(bigbuf, b);
+            strncat(bigbuf, b, l);
             if (!b)
                 error(file, dir, path2, CANT_MAP, dirent->d_name);
 
             fprintf(torrent, "d6:lengthi%lde", strlen(b));
-            fprintf(torrent, "4:pathl%ldee", strlen(dirent->d_name));
+            fprintf(torrent, "4:pathl%ld:%see", strlen(dirent->d_name), dirent->d_name);
             fclose(file);
         }
         if (nb_file == 2)
@@ -145,7 +146,7 @@ int mktorrent(char *path)
         fprintf(torrent, "6:pieces20:%.*see", 20, sha1);
         closedir(dir);
         free(bigbuf);
-        free_all(file, torrent, sha1, d, path2);
+        free_all(NULL, torrent, sha1, d, path2);
     }
 
     return 0;
