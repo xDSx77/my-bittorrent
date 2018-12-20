@@ -1,6 +1,7 @@
-#define _XOPEN_SOURCE 500
+#define _POSIX_C_SOURCE 200809L
 #include "mktorrent.h"
 #include "contact_tracker.h"
+#include "useful.h"
 
 enum err
 {
@@ -49,8 +50,29 @@ static void free_all(FILE *file, FILE *torrent, unsigned char *sha1, time_t *d,
     return;
 }
 
-void handle_file(char *path, char *path2, FILE *file, DIR *dir)
+static void print_single_file(FILE *torrent, char *buf, char *path2, time_t **d,
+    unsigned char **sha1)
 {
+    fprintf(torrent, "d8:announce30:http://localhost:6969/announce");
+    fprintf(torrent, "10:created by12:allan.cantin");
+    *d = date();
+    fprintf(torrent, "13:creation datei%lde", **d);
+    fprintf(torrent, "4:infod6:lengthi%lde", strlen(buf));
+    fprintf(torrent, "4:name%ld:%s", strlen(path2), path2);
+    fprintf(torrent, "12:piece lengthi262144e");
+    *sha1 = malloc(20);
+    if (!*sha1)
+        return;
+    condensat(buf, strlen(buf), *sha1);
+    fprintf(torrent, "6:pieces20:%.*see", 20, *sha1);
+}
+
+static void handle_file(char *path, char *path2, FILE *file, DIR *dir)
+{
+    time_t *d = NULL;
+    unsigned char *sha1 = NULL;
+    size_t len;
+
     file = fopen(path, "r");
     if (!file)
         error(file, dir, path2, NO_FILE, path);
@@ -59,9 +81,7 @@ void handle_file(char *path, char *path2, FILE *file, DIR *dir)
     if (access(path, F_OK) != -1)
         error(file, dir, path2, FILE_EXISTS, path);
 
-    int fd = fileno(file);
-    size_t length = lseek(fd, 0, SEEK_END);
-    char *buf = mmap(NULL, length, PROT_WRITE | PROT_READ, MAP_PRIVATE, fd, 0);
+    char *buf = map(file, &len);
     if (!buf)
         error(file, dir, path2, CANT_MAP, path2);
 
@@ -69,17 +89,78 @@ void handle_file(char *path, char *path2, FILE *file, DIR *dir)
     if (!torrent)
         error(file, dir, path2, CANT_CREATE, path);
 
+    print_single_file(torrent, buf, path2, &d, &sha1);
+    free_all(file, torrent, sha1, d, path2);
+}
+
+static void print_dir_first(FILE *torrent, time_t *d)
+{
     fprintf(torrent, "d8:announce30:http://localhost:6969/announce");
     fprintf(torrent, "10:created by12:allan.cantin");
-    time_t *d = date();
     fprintf(torrent, "13:creation datei%lde", *d);
-    fprintf(torrent, "4:infod6:lengthi%lde", strlen(buf));
-    fprintf(torrent, "4:name%ld:%s", strlen(path2), path2);
+    fprintf(torrent, "4:infod5:filesl");
+}
+
+static void print_dir_second(FILE *torrent, char *buf, struct dirent *dirent)
+{
+    fprintf(torrent, "d6:lengthi%lde", strlen(buf));
+    fprintf(torrent, "4:pathl%ld:%see", strlen(dirent->d_name), dirent->d_name);
+}
+
+static void print_dir_third(FILE *torrent, char *path, char *bigbuf,
+    unsigned char **sha1)
+{
+    fprintf(torrent, "e4:name%ld:%s", strlen(path), path);
     fprintf(torrent, "12:piece lengthi262144e");
-    unsigned char *sha1 = malloc(20);
-    condensat(buf, strlen(buf), sha1);
-    fprintf(torrent, "6:pieces20:%.*see", 20, sha1);
-    free_all(file, torrent, sha1, d, path2);
+    *sha1 = malloc(20);
+    condensat(bigbuf, strlen(bigbuf), *sha1);
+    fprintf(torrent, "6:pieces20:%.*see", 20, *sha1);
+}
+
+static void handle_dir(char *path, char *path2, FILE *file, DIR *dir)
+{
+    int nb_file = 0;
+    char *bigbuf = calloc(50000, 1);
+    time_t *d = date();
+    unsigned char *sha1 = NULL;
+    size_t len;
+    struct dirent **dirent;
+
+    dir = opendir(path2);
+    if (!dir)
+        error(file, dir, path2, NO_FILE, path);
+
+    strcat(path, ".torrent");
+    if (access(path, F_OK) != -1)
+        error(file, dir, path2, FILE_EXISTS, path);
+
+    FILE *torrent = fopen(path, "a+");
+    if (!torrent)
+        error(file, dir, path2, CANT_CREATE, path);
+
+    print_dir_first(torrent, d);
+    chdir(path2);
+    for (int i = 2; i < scandir(".", &dirent, NULL, alphasort); i++)
+    {
+        nb_file++;
+        file = fopen(dirent[i]->d_name, "r");
+        if (!file)
+            error(file, dir, path2, NO_FILE, dirent[i]->d_name);
+
+        char *buf = map(file, &len);
+        strncat(bigbuf, buf, len);
+        if (!buf)
+            error(file, dir, path2, CANT_MAP, dirent[i]->d_name);
+
+        print_dir_second(torrent, buf, dirent[i]);
+        fclose(file);
+    }
+    if (nb_file == 0)
+        error(file, dir, path2, EMPTY_DIR, path);
+    print_dir_third(torrent, path, bigbuf, &sha1);
+    closedir(dir);
+    free(bigbuf);
+    free_all(NULL, torrent, sha1, d, path2);
 }
 
 int mktorrent(char *path)
@@ -87,7 +168,6 @@ int mktorrent(char *path)
     char *path2 = strdup(path);
     struct stat statbuf;
     stat(path, &statbuf);
-    struct dirent *dirent = NULL;
     FILE *file = NULL;
     DIR *dir = NULL;
 
@@ -95,59 +175,7 @@ int mktorrent(char *path)
         handle_file(path, path2, file, dir);
 
     if (S_ISDIR(statbuf.st_mode))
-    {
-        dir = opendir(path2);
-        if (!dir)
-            error(file, dir, path2, NO_FILE, path);
-        int nb_file = 0;
-
-        strcat(path, ".torrent");
-        if (access(path, F_OK) != -1)
-            error(file, dir, path2, FILE_EXISTS, path);
-
-        FILE *torrent = fopen(path, "a+");
-        if (!torrent)
-            error(file, dir, path2, CANT_CREATE, path);
-
-        fprintf(torrent, "d8:announce30:http://localhost:6969/announce");
-        fprintf(torrent, "10:created by12:allan.cantin");
-        time_t *d = date();
-        fprintf(torrent, "13:creation datei%lde", *d);
-        fprintf(torrent, "4:infod5:filesl");
-        char *bigbuf = calloc(50000, 1);
-        chdir(path2);
-        while ((dirent = readdir(dir)) != NULL)
-        {
-            nb_file++;
-            if (strcmp(dirent->d_name, ".") == 0 ||
-                strcmp(dirent->d_name, "..") == 0)
-                continue;
-            file = fopen(dirent->d_name, "r");
-            if (!file)
-                error(file, dir, path2, NO_FILE, dirent->d_name);
-
-            int f = fileno(file);
-            size_t l = lseek(f, 0, SEEK_END);
-            char *b = mmap(NULL, l, PROT_WRITE | PROT_READ, MAP_PRIVATE, f, 0);
-            strncat(bigbuf, b, l);
-            if (!b)
-                error(file, dir, path2, CANT_MAP, dirent->d_name);
-
-            fprintf(torrent, "d6:lengthi%lde", strlen(b));
-            fprintf(torrent, "4:pathl%ld:%see", strlen(dirent->d_name), dirent->d_name);
-            fclose(file);
-        }
-        if (nb_file == 2)
-            error(file, dir, path2, EMPTY_DIR, path);
-        fprintf(torrent, "e4:name%ld:%s", strlen(path), path);
-        fprintf(torrent, "12:piece lengthi262144e");
-        unsigned char *sha1 = malloc(20);
-        condensat(bigbuf, strlen(bigbuf), sha1);
-        fprintf(torrent, "6:pieces20:%.*see", 20, sha1);
-        closedir(dir);
-        free(bigbuf);
-        free_all(NULL, torrent, sha1, d, path2);
-    }
+        handle_dir(path, path2, file, dir);
 
     return 0;
 }

@@ -1,6 +1,7 @@
 #ifndef MKTORRENT_H
 #define MKTORRENT_H
 
+#define _XOPEN_SOURCE 500
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
