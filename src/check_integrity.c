@@ -1,4 +1,5 @@
 #include "check_integrity.h"
+#include "useful.h"
 
 int check_integrity(struct be_node *node, char *path)
 {
@@ -7,6 +8,7 @@ int check_integrity(struct be_node *node, char *path)
     char *torrent = ".torrent";
     size_t l1 = strlen(path);
     size_t l2 = strlen(torrent);
+    size_t len;
     if (l1 <= l2)
         return 1;
     size_t i = 1;
@@ -22,9 +24,7 @@ int check_integrity(struct be_node *node, char *path)
     FILE *file  = fopen(path, "r");
     if (!file)
         return 1;
-    int fd = fileno(file);
-    int length = lseek(fd, 0, SEEK_END);
-    char *buf = mmap(NULL, length, PROT_WRITE | PROT_READ, MAP_PRIVATE, fd, 0);
+    char *buf = map(file, &len);
     unsigned char *sha2 = malloc(20);
     condensat(buf, strlen(buf), sha2);
     union cast_str cast;
