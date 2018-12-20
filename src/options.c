@@ -44,7 +44,7 @@ static int check_error(int argc, char **argv, struct options *options, int i)
     }
     if (options->activate == 2)
     {
-        if (options->d == false || options->v == false)
+        if (options->d == false && options->v == false)
         {
             printf("my-bittorrent: '%s' and '%s': incompatible options\n",
                 argv[1], argv[2]);
