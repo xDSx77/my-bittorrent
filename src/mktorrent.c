@@ -22,15 +22,15 @@ static time_t *date(void)
 static void error(char *path, enum err err)
 {
     if (err == NO_FILE)
-        printf("Error: '%s': No such file or directory", path);
+        printf("my-bittorrent: Error: '%s': No such file or directory\n", path);
     if (err == CANT_MAP)
-        printf("Error: Cannot map '%s' in memory", path);
+        printf("my-bittorrent: Error: Cannot map '%s' in memory\n", path);
     if (err == FILE_EXISTS)
-        printf("Error creating '%s': File exists", path);
+        printf("my-bittorrent: Error creating '%s': File exists\n", path);
     if (err == CANT_CREATE)
-        printf("Error: Cannot create '%s'", path);
+        printf("my-bittorrent: Error: Cannot create '%s'\n", path);
     if (err == EMPTY_DIR)
-        printf("Error: '%s': Empty directory", path);
+        printf("my-bittorrent: Error: '%s': Empty directory\n", path);
 }
 
 static void free_all(FILE *file, FILE *torrent, unsigned char *sha1, time_t *d,
@@ -63,8 +63,9 @@ static void print_single_file(FILE *torrent, char *buf, char *path2, time_t **d,
     fprintf(torrent, "6:pieces20:%.*see", 20, *sha1);
 }
 
-static int handle_file(char *path, char *path2, FILE *file)
+static int handle_file(char *path, FILE *file)
 {
+    char *path2 = strdup(path);
     time_t *d = NULL;
     unsigned char *sha1 = NULL;
     size_t len;
@@ -148,8 +149,9 @@ static void free_all_2(FILE *torrent, unsigned char *sha1, time_t *d,
     return;
 }
 
-static int handle_dir(char *path, char *path2, FILE *file, DIR *dir)
+static int handle_dir(char *path, FILE *file, DIR *dir)
 {
+    char *path2 = strdup(path);
     char *bigbuf = calloc(50000, 1);
     time_t *d = date();
     unsigned char *sha1 = NULL;
@@ -162,6 +164,14 @@ static int handle_dir(char *path, char *path2, FILE *file, DIR *dir)
     if (!dir)
     {
         error(path2, NO_FILE);
+        free_all_2(torrent, sha1, d, path2, dirent, dir, n, bigbuf);
+        return 1;
+    }
+
+    n = scandir(path2, &dirent, NULL, alphasort);
+    if (n == 2)
+    {
+        error(path2, EMPTY_DIR);
         free_all_2(torrent, sha1, d, path2, dirent, dir, n, bigbuf);
         return 1;
     }
@@ -182,9 +192,8 @@ static int handle_dir(char *path, char *path2, FILE *file, DIR *dir)
         return 1;
     }
 
-    print_dir_first(torrent, d);
     chdir(path2);
-    n = scandir(".", &dirent, NULL, alphasort);
+    print_dir_first(torrent, d);
     for (int i = 2; i < n; i++)
     {
         file = fopen(dirent[i]->d_name, "r");
@@ -195,29 +204,22 @@ static int handle_dir(char *path, char *path2, FILE *file, DIR *dir)
             return 1;
         }
         char *buf = map(file, &len);
-        strncat(bigbuf, buf, len);
         if (!buf)
         {
             error(dirent[i]->d_name, CANT_MAP);
             free_all_2(torrent, sha1, d, path2, dirent, dir, n, bigbuf);
             return 1;
         }
-
+        strncat(bigbuf, buf, len);
         print_dir_second(torrent, buf, dirent[i]);
         fclose(file);
-    }
-    if (n == 0)
-    {
-        error(path2, EMPTY_DIR);
-        free_all_2(torrent, sha1, d, path2, dirent, dir, n, bigbuf);
-        return 1;
     }
     print_dir_third(torrent, path, bigbuf, &sha1);
     free_all_2(torrent, sha1, d, path2, dirent, dir, n, bigbuf);
     return 0;
 }
 
-static void init_stat(struct stat *statbuf)
+void init_stat(struct stat *statbuf)
 {
     statbuf->st_dev = 0;
     statbuf->st_ino = 0;
@@ -233,21 +235,21 @@ static void init_stat(struct stat *statbuf)
 
 int mktorrent(char *path)
 {
-    char *path2 = strdup(path);
     struct stat statbuf;
     init_stat(&statbuf);
     stat(path, &statbuf);
     if (statbuf.st_mode == 0)
     {
-        free(path2);
+        error(path, NO_FILE);
         return 1;
     }
+
     FILE *file = NULL;
     DIR *dir = NULL;
 
     if (S_ISREG(statbuf.st_mode))
     {
-        if (handle_file(path, path2, file))
+        if (handle_file(path, file))
             return 1;
         else
             return 0;
@@ -255,11 +257,12 @@ int mktorrent(char *path)
 
     if (S_ISDIR(statbuf.st_mode))
     {
-        if (handle_dir(path, path2, file, dir))
+        if (handle_dir(path, file, dir))
             return 1;
         else
             return 0;
     }
-    free(path2);
+
+    error(path, NO_FILE);
     return 1;
 }

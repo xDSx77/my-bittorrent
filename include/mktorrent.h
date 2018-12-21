@@ -14,6 +14,7 @@
 #include <openssl/sha.h>
 #include <dirent.h>
 
+void init_stat(struct stat *statbuf);
 int mktorrent(char *path);
 
 #endif /* ! MKTORRENT_H */
