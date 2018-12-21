@@ -55,7 +55,7 @@ char *map(FILE *file, size_t *len)
 
 static struct be_node *create_node(size_t *len, FILE **torrent)
 {
-    char **buf = NULL;
+    char *buf = NULL;
     *torrent = fopen(options.data, "r");
     if (*torrent == NULL)
     {
@@ -64,7 +64,7 @@ static struct be_node *create_node(size_t *len, FILE **torrent)
         return NULL;
     }
 
-    *buf = map(*torrent, len);
+    buf = map(*torrent, len);
     if (!buf)
     {
         fclose(*torrent);
@@ -80,7 +80,7 @@ static struct be_node *create_node(size_t *len, FILE **torrent)
         fclose(*torrent);
         return NULL;
     }
-    struct be_node *node = be_decode(*buf, *len);
+    struct be_node *node = be_decode(buf, *len);
     if (!node)
     {
         fclose(*torrent);
