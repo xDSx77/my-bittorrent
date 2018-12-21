@@ -2,4 +2,41 @@ README
 
 My-BitTorrent
 
+The goal of the project is to create a program which can download and upload
+torrents, following the official BitTorrent protocol, defined in the BEP.
 
+The build system used for this project is CMake so the user must type
+"cmake ." in the root of the project to create the Makefile.
+
+The commands make, make all or make my-bittorrent create the my-bittorrent at
+the root of the build directory.
+
+This project use the following libraries:
+- jansson
+- libbencode
+- libc
+- libcurl
+- openssl
+
+To start the my-bittorent client, the user must enter:
+./my-bittorrent [options] [files]
+
+The different options avalaible and their description are visible when typing:
+"./my-bittorrent -h" or "./my-bittorent --help"
+
+
+All the options must be used alone except for the "-v" and "-d" which can be
+combined with any other option.
+
+
+
+
+
+
+
+
+
+December 2018
+
+Nassim HABIB-ALLAH
+Allan CANTIN

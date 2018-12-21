@@ -1,0 +1,26 @@
+TODO
+
+O = not done
+~ = not finished
+X = done
+
+[~] Core features
+ |- [X] -p / --pretty-print-torrent-file option
+ |- [X] -m / --mktorrent option
+ |- [~] -c / --check-integrity option
+ |- [~] -d / --dump-peers option
+ |- [O] -v / --verbose option
+[O] Advanced features
+ |- [O] -s / --seed option
+ |- [O] multiple torrents
+ |- [O] leech interruption
+ |- [O] DHT
+
+
+
+
+
+
+December 2018
+Nassim HABIB-ALLAH
+Allan CANTIN
