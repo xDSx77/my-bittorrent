@@ -8,6 +8,7 @@ void init_options(struct options *options)
     options->c = false;
     options->p = false;
     options->s = false;
+    options->h = false;
     options->activate = 0;
     options->end_index = 0;
     options->data = NULL;
@@ -21,6 +22,7 @@ void print_options(struct options *options)
     printf("option c: %d\n", options->c);
     printf("option p: %d\n", options->p);
     printf("option s: %d\n", options->s);
+    printf("option h: %d\n", options->h);
     printf("number of options activated: %d\n", options->activate);
     printf("index of the last option: %d\n", options->end_index);
     printf("data: %s\n", options->data);
@@ -107,6 +109,8 @@ static int parse_long(int argc, char **argv, struct options *options, int i)
             if (fill_options(argc, argv, options, &i, &options->s) == -1)
                 return -1;
         }
+        else if (strcmp("--help", argv[i]) == 0)
+            options->h = true;
         else
         {
             printf("my-bittorrent: %s: unknown long option\n", argv[i]);
@@ -152,6 +156,8 @@ static int parse_short(int argc, char **argv, struct options *options, int i)
             if (fill_options(argc, argv, options, &i, &options->s) == -1)
                 return -1;
         }
+        else if (strcmp("-h", argv[i]) == 0)
+            options->h = true;
         else
         {
             printf("my-bittorrent: %s: unknown short option\n", argv[i]);
@@ -164,18 +170,15 @@ static int parse_short(int argc, char **argv, struct options *options, int i)
 
 int parse_options(int argc, char **argv, struct options *options)
 {
-    if (argc == 1)
-        return 0;
-
     int i = 1;
 
     i = parse_long(argc, argv, options, i);
     if (i == -1)
-        return -1;
+        return 1;
 
     i = parse_short(argc, argv, options, i);
     if (i == -1)
-        return -1;
+        return 1;
 
     return 0;
 }

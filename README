@@ -5,11 +5,14 @@ My-BitTorrent
 The goal of the project is to create a program which can download and upload
 torrents, following the official BitTorrent protocol, defined in the BEP.
 
+
 The build system used for this project is CMake so the user must type
 "cmake ." in the root of the project to create the Makefile.
 
+
 The commands make, make all or make my-bittorrent create the my-bittorrent at
 the root of the build directory.
+
 
 This project use the following libraries:
 - jansson
@@ -18,22 +21,37 @@ This project use the following libraries:
 - libcurl
 - openssl
 
+
 To start the my-bittorent client, the user must enter:
 ./my-bittorrent [options] [files]
 
-The different options avalaible and their description are visible when typing:
-"./my-bittorrent -h" or "./my-bittorent --help"
+
+Description of the different options:
+
+-p|--pretty-print-torrent-file <.torrent file> : print the torrent file in the
+standard output as JSON format.
+
+-m|--mktorrent <path> : use the given path to generate a <path>.torrent file
+that corresponds to a valid metainfo file serving <path>.
+
+-c|--check-integrity <.torrent file> : check if the .torrent file is valid in
+the current working directory.
+
+-d|--dump-peers <.torrent file> : contact the tracker related to the given
+.torrent file and print the peers returned by the tracker, one per line.
+
+-v|--verbose <.torrent file> : log all the network communications with the
+peers that have the files written in the .torrent file
+
+-s|--seed <.torrent file> : seed the torrent indefinitely once the download
+is finished.
+
+-h|--help : list all the options available for the my-bittorrent binary.
+
 
 
 All the options must be used alone except for the "-v" and "-d" which can be
 combined with any other option.
-
-
-
-
-
-
-
 
 
 December 2018

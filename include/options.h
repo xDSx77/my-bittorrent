@@ -13,6 +13,7 @@ struct options
     bool c;
     bool p;
     bool s;
+    bool h;
     int activate;
     int end_index;
     char *data;

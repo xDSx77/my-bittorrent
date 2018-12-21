@@ -25,8 +25,7 @@ static void free_all(struct be_node *node, FILE *torrent)
 static int init_and_parse_options(int argc, char **argv)
 {
     init_options(&options);
-    int nb_options = parse_options(argc, argv, &options);
-    if (nb_options == -1)
+    if (parse_options(argc, argv, &options))
         return 1;
     return 0;
 }
@@ -61,6 +60,18 @@ static struct be_node *create_node(size_t *len, FILE **torrent, char **buf)
     return node;
 }
 
+static void help(void)
+{
+    printf("Usage:   ./my-bittorrent [options] [files]\n");
+    printf("Options: -p|--pretty-print-torrent-file <.torrent file>\n");
+    printf("         -m|--mktorrent <path>\n");
+    printf("         -c|--check-integrity <.torrent file>\n");
+    printf("         -d|--dump-peers <.torrent file>\n");
+    printf("         -v|--verbose <.torrent file>\n");
+    printf("         -s|--seed <.torrent file>\n");
+    printf("         -h|--help\n");
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1)
@@ -68,6 +79,9 @@ int main(int argc, char **argv)
 
     if (init_and_parse_options(argc, argv))
         return 1;
+
+    if (options.h)
+        help();
 
     if (options.m)
     {
