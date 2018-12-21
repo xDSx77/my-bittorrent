@@ -8,7 +8,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 add_executable(my-bittorrent
     ${CMAKE_SOURCE_DIR}/src/main.c
     ${CMAKE_SOURCE_DIR}/src/options.c
-    ${CMAKE_SOURCE_DIR}/src/contact_tracker.c
+    ${CMAKE_SOURCE_DIR}/src/dump_peers.c
     ${CMAKE_SOURCE_DIR}/src/pretty_print.c
     ${CMAKE_SOURCE_DIR}/src/mktorrent.c
     ${CMAKE_SOURCE_DIR}/src/check_integrity.c

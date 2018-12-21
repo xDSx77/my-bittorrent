@@ -10,7 +10,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include "bencode/bencode.h"
-#include "contact_tracker.h"
+#include "dump_peers.h"
 
 int check_integrity(struct be_node *node, char *path);
 

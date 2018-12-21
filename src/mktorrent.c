@@ -1,6 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "mktorrent.h"
-#include "contact_tracker.h"
+#include "dump_peers.h"
 #include "useful.h"
 
 enum err

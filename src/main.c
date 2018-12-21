@@ -10,7 +10,7 @@
 #include "bencode/bencode.h"
 #include "options.h"
 #include "useful.h"
-#include "contact_tracker.h"
+#include "dump_peers.h"
 #include "mktorrent.h"
 #include "check_integrity.h"
 
