@@ -22,11 +22,26 @@ static void free_all(struct be_node *node, FILE *torrent)
     fclose(torrent);
 }
 
+static void help(void)
+{
+    printf("Usage:   ./my-bittorrent [options] [files]\n");
+    printf("Options: -p|--pretty-print-torrent-file <.torrent file>\n");
+    printf("         -m|--mktorrent <path>\n");
+    printf("         -c|--check-integrity <.torrent file>\n");
+    printf("         -d|--dump-peers <.torrent file>\n");
+    printf("         -v|--verbose <.torrent file>\n");
+    printf("         -s|--seed <.torrent file>\n");
+    printf("         -h|--help\n");
+}
+
 static int init_and_parse_options(int argc, char **argv)
 {
     init_options(&options);
     if (parse_options(argc, argv, &options))
+    {
+        help();
         return 1;
+    }
     return 0;
 }
 
@@ -38,8 +53,9 @@ char *map(FILE *file, size_t *len)
     return buf;
 }
 
-static struct be_node *create_node(size_t *len, FILE **torrent, char **buf)
+static struct be_node *create_node(size_t *len, FILE **torrent)
 {
+    char **buf = NULL;
     *torrent = fopen(options.data, "r");
     if (*torrent == NULL)
     {
@@ -73,18 +89,6 @@ static struct be_node *create_node(size_t *len, FILE **torrent, char **buf)
     return node;
 }
 
-static void help(void)
-{
-    printf("Usage:   ./my-bittorrent [options] [files]\n");
-    printf("Options: -p|--pretty-print-torrent-file <.torrent file>\n");
-    printf("         -m|--mktorrent <path>\n");
-    printf("         -c|--check-integrity <.torrent file>\n");
-    printf("         -d|--dump-peers <.torrent file>\n");
-    printf("         -v|--verbose <.torrent file>\n");
-    printf("         -s|--seed <.torrent file>\n");
-    printf("         -h|--help\n");
-}
-
 int main(int argc, char **argv)
 {
     if (argc == 1)
@@ -109,9 +113,8 @@ int main(int argc, char **argv)
 
     size_t len;
     FILE *torrent = NULL;
-    char *buf = NULL;
     struct be_node *node = NULL;
-    if ((node = create_node(&len, &torrent, &buf)) == NULL)
+    if ((node = create_node(&len, &torrent)) == NULL)
         return 1;
 
     if (options.c)
@@ -124,7 +127,13 @@ int main(int argc, char **argv)
     }
 
     if (options.d)
-        contact(node, len);
+    {
+       if ( contact(node, len))
+       {
+           free_all(node, torrent);
+           return 1;
+       }
+    }
 
     if (options.p)
         pretty_print(node);
