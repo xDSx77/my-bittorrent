@@ -124,7 +124,7 @@ int main(int argc, char **argv)
     }
 
     if (options.d)
-        contact(node, buf, len);
+        contact(node, len);
 
     if (options.p)
         pretty_print(node);

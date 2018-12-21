@@ -8,10 +8,22 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, char *userdata)
         return 0;
 
     struct be_node *node = be_decode(ptr, size * nmemb);
-    char *peers = node->element.dict[5]->val->element.str->content;
+    char *peers;
+    size_t len;
 
-    userdata = memcpy(userdata, peers, 50);
+    for (int i = 0; node->element.dict; i++)
+    {
+        if (!strcmp(node->element.dict[i]->key->content, "peers"))
+        {
+            peers = node->element.dict[i]->val->element.str->content;
+            len = node->element.dict[i]->val->element.str->length;
+            break;
+        }
+    }
 
+    dump_peers(peers, len);
+
+    userdata = userdata;
     be_free(node);
 
     return size * nmemb;   //have to return the number of bytes written
@@ -25,7 +37,7 @@ void setopt_handle(CURL *handle, char *url, char *data, char *errbuf)
     curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, errbuf);
 }
 
-int contact(struct be_node *node, char *buf, int len_buf)
+int contact(struct be_node *node, int len_buf)
 {
     if (!node)
         return 1;
@@ -34,7 +46,7 @@ int contact(struct be_node *node, char *buf, int len_buf)
 
     char *url = calloc(290,1);
 
-    compact(node, url, buf, len_buf);
+    compact(node, url, len_buf);
 
     //manage error of calloc maybe//
     char *data = calloc(50000, 1);
@@ -51,29 +63,28 @@ int contact(struct be_node *node, char *buf, int len_buf)
     }
 
     //function to exploit data
-    dump_peers(data);
 
     free_curl(handle, url, data, errbuf);
 
     return 0;
 }
 
-char *compact(struct be_node *node, char *str, char *buf, int len_buf)
+char *compact(struct be_node *node, char *str, int len_buf)
 {
     CURL *handle = curl_easy_init();
     memset(str, 0, 290);
     strcat(str, node->element.dict[0]->val->element.str->content);
 
+    // --info_hash-- //
+    char *buf_escaped = find_info(node, len_buf);
+    char *sha1_esc = info_hash(str, buf_escaped, handle);
+
     // --peer_id-- //
     char *peer_id_esc = peer_id(node, str, handle);
 
-    // --info_hash-- //
-    char *buf_escaped = find_info(buf, len_buf, handle);
-    char *sha1_esc = info_hash(str, buf_escaped, handle);
-
     // --other--//
     strcat(str, "&port=1174");
-    strcat(str, "&left=50");
+    strcat(str, "&left=57");
     strcat(str, "&downloaded=0");
     strcat(str, "&uploaded=0");
     strcat(str, "&event=started");
@@ -86,8 +97,10 @@ char *compact(struct be_node *node, char *str, char *buf, int len_buf)
 
 char *peer_id(struct be_node *node, char *str, CURL *handle)
 {
-    strcat(str, "?peer_id=-MB2021-");
-    char *peer_id = node->element.dict[1]->val->element.str->content;
+    strcat(str, "&peer_id=-MB2021-");
+    char *peer_id = calloc(20,1);
+    size_t len = node->element.dict[1]->val->element.str->length;
+    memcpy(peer_id, node->element.dict[1]->val->element.str->content, len);
 
     if (strlen("-MB2021-") + strlen(peer_id) < 20)
     {
@@ -103,35 +116,32 @@ char *peer_id(struct be_node *node, char *str, CURL *handle)
 
     char *peer_id_esc = curl_easy_escape(handle, peer_id, strlen(peer_id));
     strcat(str, peer_id_esc);
+    free(peer_id);
 
     return peer_id_esc;
 }
 
-char *find_info(char *buf, int len_buf, CURL *handle)
+char *find_info(struct be_node *node, int len_buf)
 {
-    int i = 0;
-    char *info = NULL;
-    while (buf[i])
+    struct be_node *info;
+    size_t len = len_buf;
+    for (int i = 0; node->element.dict[i]; i++)
     {
-        if (buf[i] == ':' && buf[i + 1] == 'i' && buf[i + 2] == 'n')
-            if (buf[i + 3] == 'f' && buf[i + 4] == 'o' && buf[i + 5] == 'd')
-            {
-                i += 5;
-                info = buf + i;
-                break;
-            }
-        i++;
+        if (!strcmp(node->element.dict[i]->key->content, "info"))
+        {
+            info = node->element.dict[i]->val;
+            break;
+        }
     }
-    info[len_buf - i - 1] = '\0';   //delete the final e of the first dict
 
-    char *buf_escaped = curl_easy_escape(handle, info, len_buf - i);
+    char *info_str = be_encode(info, &len);
 
-    return buf_escaped;
+    return info_str;
 }
 
 char *info_hash(char *str, char *buf_escaped, CURL *handle)
 {
-    strcat(str, "&info_hash=");
+    strcat(str, "?info_hash=");
     unsigned char *sha1 = calloc(SHA_DIGEST_LENGTH, 1);
     union cast_str cast1;
     condensat(buf_escaped, strlen(buf_escaped), sha1);
@@ -162,12 +172,24 @@ unsigned char *condensat(char *str, size_t len_str, unsigned char *cond)
     return cond;
 }
 
-void dump_peers(char *peers)
+void dump_peers(char *peers, size_t len_peers)
 {
-    char ip[18];
-    sprintf(ip, "%d.%d.%d.%d", peers[0], peers[1], peers[2], peers[3]);
-    uint16_t big = peers[4];
-    uint16_t low = peers[5];
-    int port = ntohs(big) | ntohs(low);
-    printf("%s:%d\n", ip, port);
+    char ip[50];
+    union cast_char cast1;
+    union cast_char cast2;
+    union cast_char cast3;
+    union cast_char cast4;
+    union cast_uint16 cast_port;
+
+    for (size_t i = 0; i < len_peers; i += 6)
+    {
+        cast1.char_ = peers[i];
+        cast2.char_ = peers[i + 1];
+        cast3.char_ = peers[i + 2];
+        cast4.char_ = peers[i + 3];
+        sprintf(ip, "%d.%d.%d.%d",
+                cast1.uchar, cast2.uchar, cast3.uchar, cast4.uchar);
+        cast_port.str = peers + i + 4;
+        printf("%s:%d\n", ip, ntohs(*(cast_port.uint16)));
+    }
 }
