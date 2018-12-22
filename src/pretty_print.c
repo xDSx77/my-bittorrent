@@ -1,26 +1,28 @@
 #include "pretty_print.h"
 
+static void print_element(struct be_node *node, int *i, int index)
+{
+    int len = node->element.list[*i]->element.str->length;
+    if (index == 1)
+    {
+        printf("\"%.*s\"", len, node->element.list[*i]->element.str->content);
+        (*i)++;
+    }
+    else
+        printf(", \"%.*s\"", len, node->element.list[*i]->element.str->content);
+}
+
 void print_list(struct be_node *node, int indent)
 {
     printf("\n");
     int i = 0;
-    if (indent == 1)
-        printf("    [");
-    else if (indent == 2)
-        printf("        [");
-    else if (indent == 3)
-        printf("            [");
+    printf("%*s%s", indent * 4, " ", "[");
     if (node->element.list[i]->type == BE_STR)
-    {
-        printf("\"%.*s\"", (int)node->element.list[i]->element.str->length,
-            node->element.list[i]->element.str->content);
-        i++;
-    }
+        print_element(node, &i, 1);
     while (node->element.list[i] != NULL)
     {
         if (node->element.list[i]->type == BE_STR)
-            printf(", \"%.*s\"", (int)node->element.list[i]->element.str->length,
-                node->element.list[i]->element.str->content);
+            print_element(node, &i, 2);
         else if (node->element.list[i]->type == BE_DICT)
         {
             if (node->element.list[i + 1] == NULL)
@@ -36,38 +38,25 @@ void print_list(struct be_node *node, int indent)
         printf("        ],\n");
     else if (indent == 3)
         printf("]\n");
-
 }
 
 void print_dict(struct be_node *node, int indent, int comma)
 {
-    if (indent == 1)
-        printf("\n    {\n");
-    else if (indent == 2)
-        printf("\n        {\n");
-    else if (indent == 3)
-        printf("\n            {\n");
+    printf("%s%*s%s", "\n", indent * 4, " ", "{\n");
     if (indent == 1)
         print_data(node, 2);
     else if (indent == 3)
         print_data(node, 3);
-    if (indent == 1)
-        printf("    }\n");
-    else if (indent == 2)
-        printf("        }\n");
-    else if (indent == 3)
-    {
-        if (comma == 1)
-            printf("            },\n");
-        else
-            printf("            }\n");
-    }
+    printf("%*s%s", indent * 4, " ", "}");
+    if (indent == 3 && comma == 1)
+        printf(",");
+    printf("\n");
 }
 
 void print_string(struct be_node *node, int i)
 {
-    for (int j = 0; j < (int)node->element.dict[i]->val->element.str->length;
-        j++)
+    long long int len = node->element.dict[i]->val->element.str->length;
+    for (long long int j = 0; j < len; j++)
     {
         if (node->element.dict[i]->val->element.str->content[j] >= 32
             && node->element.dict[i]->val->element.str->content[j] <= 126)
@@ -97,14 +86,9 @@ void print_data(struct be_node *node, int indent)
     int i = 0;
     while (node->element.dict[i] != NULL)
     {
-        if (indent == 1)
-            printf("    ");
-        else if (indent == 2)
-            printf("        ");
-        else if (indent == 3)
-            printf("            ");
-        printf("\"%.*s\": ", (int)node->element.dict[i]->key->length,
-            node->element.dict[i]->key->content);
+        printf("%*s", indent * 4, " ");
+        int len = node->element.dict[i]->key->length;
+        printf("\"%.*s\": ", len, node->element.dict[i]->key->content);
         if (node->element.dict[i]->val->type == BE_INT)
             printf("%llu,\n", node->element.dict[i]->val->element.num);
         else if (node->element.dict[i]->val->type == BE_STR)

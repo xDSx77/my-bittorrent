@@ -42,7 +42,11 @@ static struct be_node *create_node(size_t *len, FILE **torrent, char **buf)
 {
     *torrent = fopen(options.data, "r");
     if (*torrent == NULL)
+    {
+        printf("my-bittorrent: Error: '%s': No such file or directory\n",
+            options.data);
         return NULL;
+    }
 
     *buf = map(*torrent, len);
     if (!buf)
@@ -50,7 +54,16 @@ static struct be_node *create_node(size_t *len, FILE **torrent, char **buf)
         fclose(*torrent);
         return NULL;
     }
-
+    struct stat statbuf;
+    init_stat(&statbuf);
+    stat(options.data, &statbuf);
+    if (S_ISDIR(statbuf.st_mode))
+    {
+        printf("my-bittorrent: Error: '%s': Not a torrent file\n",
+            options.data);
+        fclose(*torrent);
+        return NULL;
+    }
     struct be_node *node = be_decode(*buf, *len);
     if (!node)
     {
@@ -81,7 +94,10 @@ int main(int argc, char **argv)
         return 1;
 
     if (options.h)
+    {
         help();
+        return 0;
+    }
 
     if (options.m)
     {

@@ -180,5 +180,7 @@ int parse_options(int argc, char **argv, struct options *options)
     if (i == -1)
         return 1;
 
+    if (!options->data)
+        options->data = argv[i];
     return 0;
 }
